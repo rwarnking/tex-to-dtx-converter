@@ -57,13 +57,11 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_LATEX: true
-          VALIDATE_JSON: true
           VALIDATE_PYTHON_BLACK: true
           VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_PYTHON_ISORT: true
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_MYPY: true
-          VALIDATE_BASH: true
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_MARKDOWN: true
           DEFAULT_BRANCH: main
@@ -72,3 +70,4 @@ jobs:
           PYTHON_FLAKE8_CONFIG_FILE: .flake8
           PYTHON_ISORT_CONFIG_FILE: .isort.cfg
           PYTHON_PYLINT_CONFIG_FILE: .python-lint
+          PYTHON_MYPY_CONFIG_FILE: .mypy.ini

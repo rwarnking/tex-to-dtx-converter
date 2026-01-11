@@ -1,26 +1,19 @@
 import threading
 from idlelib.tooltip import Hovertip
-from tkinter import (
-    HORIZONTAL,
-    Button,
-    Label,
-    StringVar,
-    Tk,
-    filedialog,
-    messagebox,
-)
+from pathlib import Path
+from tkinter import HORIZONTAL, Button, Label, StringVar, Tk, filedialog, messagebox
 from tkinter.ttk import Progressbar, Separator
 
 # own imports
+from core.converter import Converter
 from gui.helper import center_window
 from gui.settings import PAD_X, PAD_Y
 from gui.tooltips import TooltipDict
-from core.converter import Converter
 from meta_information import MetaInformation
 
 
 class GuiApp:
-    def __init__(self, src_dir, tgt_dir):
+    def __init__(self, src_dir: Path, tgt_dir: Path):
         self.window = Tk()
         self.window.title("Tex to Dtx Converter")
 
@@ -86,7 +79,7 @@ class GuiApp:
     ###############################################################################################
     # Initialization functions
     ###############################################################################################
-    def init_resource_folder(self, src_dir, tgt_dir):
+    def init_resource_folder(self, src_dir: Path, tgt_dir: Path):
         """Add GUI elemtens for source and target directory."""
 
         def browse_button(dir: StringVar):
@@ -95,9 +88,9 @@ class GuiApp:
                 dir.set(filename)
 
         self.sv_src_dir = StringVar()
-        self.sv_src_dir.set(src_dir)
+        self.sv_src_dir.set(str(src_dir))
         self.sv_tgt_dir = StringVar()
-        self.sv_tgt_dir.set(tgt_dir)
+        self.sv_tgt_dir.set(str(tgt_dir))
         self.meta_info.set_dirs(src_dir, tgt_dir)
 
         # Source directory
@@ -105,7 +98,12 @@ class GuiApp:
         lbl1.grid(row=self.row_idx, column=0, padx=PAD_X, pady=PAD_Y, sticky="EW")
         lbl_src_dir = Label(self.window, textvariable=self.sv_src_dir)
         lbl_src_dir.grid(
-            row=self.row_idx, column=1, columnspan=1, padx=PAD_X, pady=PAD_Y, sticky="EW"
+            row=self.row_idx,
+            column=1,
+            columnspan=1,
+            padx=PAD_X,
+            pady=PAD_Y,
+            sticky="EW",
         )
         btn_src = Button(
             self.window,
@@ -139,9 +137,7 @@ class GuiApp:
         )
         self.file_progress["value"] = 0
         self.file_progress.update()
-        self.file_progress.grid(
-            row=self.row(), columnspan=3, sticky="EW", padx=PAD_X, pady=PAD_Y
-        )
+        self.file_progress.grid(row=self.row(), columnspan=3, sticky="EW", padx=PAD_X, pady=PAD_Y)
         self.lbl_mile_prog = Label(self.window, text="")
         self.lbl_mile_prog.grid(row=self.row(), columnspan=3, sticky="E", padx=PAD_X, pady=PAD_Y)
 

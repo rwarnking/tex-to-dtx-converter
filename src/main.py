@@ -1,5 +1,5 @@
-import os
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -13,40 +13,37 @@ else:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Example program with CLI and GUI modes"
-    )
+    parser = argparse.ArgumentParser(description="Example program with CLI and GUI modes")
 
-    parser.add_argument(
-        "--gui",
-        action="store_true",
-        help="Launch the graphical user interface"
-    )
+    parser.add_argument("--gui", action="store_true", help="Launch the graphical user interface")
 
     # TODO there is no check in place whether the given or default path exist
     parser.add_argument(
         "--source-dir",
         type=Path,
         default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "source")),
-        help="Source directory path"
+        help="Source directory path",
     )
 
     parser.add_argument(
         "--target-dir",
         type=Path,
         default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "target")),
-        help="Target directory path"
+        help="Target directory path",
     )
 
     args = parser.parse_args()
 
     if args.gui:
         from gui.main_window import GuiApp
-        main_app = GuiApp(args.source_dir, args.target_dir)
+
+        GuiApp(args.source_dir, args.target_dir)
     else:
         from cli import CliApp
-        main_app = CliApp(args.source_dir, args.target_dir)
-        main_app.run()
+
+        cli_app = CliApp(args.source_dir, args.target_dir)
+        cli_app.run()
+
 
 if __name__ == "__main__":
     main()
