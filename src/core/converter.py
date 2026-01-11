@@ -1,16 +1,74 @@
 import re
 
+from datetime import date
+from pathlib import Path
 
-# https://www.texdev.net/2009/10/06/a-model-dtx-file/
-class TexDtxConverter:
-    def __init__(self):
-        # TODO this is stupid
-        self.last_elem_was_text = False
 
-    def parse_tex(self, file_dir):
+class Converter:
+    def __init__(self, meta_info):
+        self.meta_info = meta_info
+
+    def execute(self):
+        src_dir = self.meta_info.src_dir
+
+        self.meta_info.set_max_file_count(len(list(src_dir.iterdir())))
+
+        self._load_package_metainfo(src_dir)
+
+        parsed_tex = {}
+        for file_dir in list(src_dir.iterdir()):
+            ext = file_dir.suffix
+
+            if ext == ".tex":
+                section_name = file_dir.stem.split("_")[1]
+                parsed_tex[section_name] = self._parse_tex(file_dir)
+            else:
+                print(f"Unknown file type for file {file_dir.stem}.")
+
+            self.meta_info.incr_file_count()
+
+        # Save all data to one dtx
+        res_dtx = self._tex_to_dtx(src_dir/"docu", parsed_tex)
+        # TODO
+        self._save_to_dir(f"glmatrix.dtx", res_dtx)
+
+        self.meta_info.finished = True
+
+    def _save_to_dir(self, filename, content):
+        tgt_dir = self.meta_info.tgt_dir
+        print(tgt_dir / filename)
+        # print(content.encode('ascii', 'ignore'))
+
+        with open(tgt_dir / filename, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    def _load_package_metainfo(self, src_dir):
+        # default setup
+        self.pkg_meta = {
+            "pkg_name": "SamplePackage",
+            "pkg_description": "TODO",
+            "pkg_author": "Sample author",
+            "pkg_author_email": "example@email.com",
+            "pkg_date": date.today().strftime("%Y/%m/%d"),
+            "pkg_version": 1.0,
+            "pkg_info_text": "Info text"
+        }
+
+        pkginfo_file_path = src_dir / "package_config.txt"
+        # Load file if it exists, otherwise use default
+        # if pkginfo_file_path.exists():
+        #     with pkginfo_file_path.open("r", encoding="utf-8") as f:
+        #         for line in f:
+        #             if "=" in line:
+        #                 key, value = line.strip().split("=", 1)
+        #                 if key == "pkg_date" and value == "today":
+        #                     self.pkg_meta[key] = date.today().strftime("%Y/%m/%d")
+        #                 else:
+        #                     self.pkg_meta[key] = value
+
+    def _parse_tex(self, file_dir):
         tex_objects = []
         with open(file_dir, encoding="utf-8") as f:
-            out_content = ""
             cur_object = {
                 "o_type": None,
                 "o_content": [],
@@ -53,12 +111,11 @@ class TexDtxConverter:
 
         return tex_objects
 
-    def tex_to_dtx(self, src_dir, parsed_tex):
+    def _tex_to_dtx(self, src_dir, parsed_tex):
         docu_output = ""
         impl_output = ""
 
         output = ""
-
         output += self._add_header(src_dir)
 
         for key, value in parsed_tex.items():
@@ -111,41 +168,22 @@ class TexDtxConverter:
         return output
 
     def _add_header(self, src_dir):
-        pkg_name = "glmatrix"
-        pkg_author = "Rene Warnking"
-        pkg_date = "2025/12/15"
+        header = ""
 
-        header = """% \\iffalse meta-comment
-%<*internal>
-\\iffalse
-%</internal>
-%<*readme>
-Some README information here :-)
-%</readme>
-\\NeedsTeXFormat{LaTeX2e}
-"""
-        header += f"\\ProvidesPackage{{{pkg_name}}}[2025/12/15 v0.1 Object abstraction]\n"
+        header += self._fill_template(Path("src/core/tex_templates/01_head.tex"))
+        header += self._fill_template(Path("src/core/tex_templates/02_preamble_template.tex"))
+        header += self._fill_template(Path("src/core/tex_templates/03_postamble_template.tex"))
+        header += self._fill_template(Path("src/core/tex_templates/04_generate_template.tex"))
 
-        with open(src_dir/"header.tex", encoding="utf-8") as f:
+        # Load packages (no template)
+        with open(src_dir/"packages_and_settings.tex", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
                 header += line
         header += "\n"
 
-        header += f"""
-\\begin{{document}}
-    \\title{{The \\textsf{{{pkg_name}}} Package}}
-    \\author{{{pkg_author}}}
-    \\date{{{pkg_date}}}
-    \\maketitle
-
-    \\tableofcontents
-
-    \\DocInput{{{pkg_name}.dtx}}
-\\end{{document}}
-%</driver>
-% \\fi
-"""
+        header += self._fill_template(Path("src/core/tex_templates/05_predocument.tex"))
+        header += self._fill_template(Path("src/core/tex_templates/06_document_template.tex"))
 
         introduction = ""
         with open(src_dir/"introduction.tex", encoding="utf-8") as f:
@@ -257,3 +295,15 @@ Some README information here :-)
         obj_impl += "% \\end{macro}\n\n"
         
         return obj_docu, obj_impl, command
+
+    def _fill_template(self, file_path: Path):
+        # Read the entire file into one string
+        if file_path.exists():
+            result: str = file_path.read_text(encoding="utf-8")
+
+            for key, value in self.pkg_meta.items():
+                result = result.replace(f"<{key.upper()}>", f"{value}")
+            return result
+        else:
+            print(f"File {file_path} does not exist.")
+            return ""

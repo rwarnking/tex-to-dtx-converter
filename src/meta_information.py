@@ -1,6 +1,3 @@
-from tkinter import StringVar
-
-
 class MetaInformation:
     """Collection class for all kinds of metainformation and program settings."""
 
@@ -29,8 +26,6 @@ class MetaInformation:
         return self.max_file_count
 
     def set_dirs(self, src_dir: str, tgt_dir: str):
-        """Set the source and target directories for the images and the database."""
-        self.src_dir = StringVar()
-        self.src_dir.set(src_dir)
-        self.tgt_dir = StringVar()
-        self.tgt_dir.set(tgt_dir)
+        """Set the source and target directories."""
+        self.src_dir = src_dir
+        self.tgt_dir = tgt_dir

@@ -1,0 +1,21 @@
+% \iffalse meta-comment
+%<*internal>
+\iffalse
+%</internal>
+%<*readme>
+Some README information here
+%</readme>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{<PKG_NAME>}[<PKG_DATE> v<PKG_VERSION> <PKG_INFO_TEXT>]
+
+%<*internal>
+\fi
+\def\nameofplainTeX{plain}
+\ifx\fmtname\nameofplainTeX\else
+  \expandafter\begingroup
+\fi
+%</internal>
+%<*install>
+\input docstrip.tex
+\keepsilent
+\askforoverwritefalse

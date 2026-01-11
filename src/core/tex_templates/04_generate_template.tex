@@ -1,0 +1,24 @@
+% \usedir{tex/latex/<PKG_NAME>}
+\generate{
+  \file{<PKG_NAME>.sty}{\from{<PKG_NAME>.dtx}{package}}
+}
+%</install>
+%<install>\endbatchfile
+%<*internal>
+% \usedir{source/latex/<PKG_NAME>}
+\generate{
+  \file{<PKG_NAME>.ins}{\from{<PKG_NAME>.dtx}{install}}
+}
+\nopreamble\nopostamble
+% \usedir{doc/latex/<PKG_NAME>}
+\generate{
+  \file{README.txt}{\from{<PKG_NAME>.dtx}{readme}}
+}
+\ifx\fmtname\nameofplainTeX
+  \expandafter\endbatchfile
+\else
+  \expandafter\endgroup
+\fi
+%</internal>
+%<*driver>
+\documentclass{ltxdoc}
