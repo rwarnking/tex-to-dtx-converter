@@ -28,7 +28,7 @@ class MetaInformation:
     def get_max_file_count(self) -> int:
         return self.max_file_count
 
-    def set_dirs(self, src_dir: Path, tgt_dir: Path):
+    def set_dirs(self, rsc_dir: Path, tgt_dir: Path):
         """Set the source and target directories."""
-        self.src_dir = src_dir
+        self.rsc_dir = rsc_dir
         self.tgt_dir = tgt_dir

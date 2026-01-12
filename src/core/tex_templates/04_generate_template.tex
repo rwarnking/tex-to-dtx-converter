@@ -1,16 +1,16 @@
-% \usedir{tex/latex/<PKG_NAME>}
+\usedir{tex/latex/<PKG_NAME>}
 \generate{
   \file{<PKG_NAME>.sty}{\from{<PKG_NAME>.dtx}{package}}
 }
 %</install>
 %<install>\endbatchfile
 %<*internal>
-% \usedir{source/latex/<PKG_NAME>}
+\usedir{source/latex/<PKG_NAME>}
 \generate{
   \file{<PKG_NAME>.ins}{\from{<PKG_NAME>.dtx}{install}}
 }
 \nopreamble\nopostamble
-% \usedir{doc/latex/<PKG_NAME>}
+\usedir{doc/latex/<PKG_NAME>}
 \generate{
   \file{README.txt}{\from{<PKG_NAME>.dtx}{readme}}
 }
@@ -20,5 +20,11 @@
   \expandafter\endgroup
 \fi
 %</internal>
+
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{<PKG_NAME>}[<PKG_DATE> v<PKG_VERSION> <PKG_INFO_TEXT>]
+%</package>
+
 %<*driver>
 \documentclass{ltxdoc}

@@ -13,7 +13,7 @@ from meta_information import MetaInformation
 
 
 class GuiApp:
-    def __init__(self, src_dir: Path, tgt_dir: Path):
+    def __init__(self, rsc_dir: Path, tgt_dir: Path):
         self.window = Tk()
         self.window.title("Tex to Dtx Converter")
 
@@ -21,7 +21,7 @@ class GuiApp:
 
         self.row_idx = 0
 
-        self.init_resource_folder(src_dir, tgt_dir)
+        self.init_resource_folder(rsc_dir, tgt_dir)
         separator = Separator(self.window, orient="horizontal")
         separator.grid(row=self.row(), column=0, columnspan=3, padx=PAD_X, pady=PAD_Y, sticky="EW")
         self.init_progressindicator()
@@ -44,7 +44,7 @@ class GuiApp:
             messagebox.showinfo(message="Conversion is already happening.", title="Error")
             return
 
-        if self.meta_info.src_dir == "" or self.meta_info.tgt_dir == "":
+        if self.meta_info.rsc_dir == "" or self.meta_info.tgt_dir == "":
             messagebox.showinfo(message="No folder selected.", title="Error")
             return
 
@@ -79,7 +79,7 @@ class GuiApp:
     ###############################################################################################
     # Initialization functions
     ###############################################################################################
-    def init_resource_folder(self, src_dir: Path, tgt_dir: Path):
+    def init_resource_folder(self, rsc_dir: Path, tgt_dir: Path):
         """Add GUI elemtens for source and target directory."""
 
         def browse_button(dir: StringVar):
@@ -87,17 +87,17 @@ class GuiApp:
             if filename != "":
                 dir.set(filename)
 
-        self.sv_src_dir = StringVar()
-        self.sv_src_dir.set(str(src_dir))
+        self.sv_rsc_dir = StringVar()
+        self.sv_rsc_dir.set(str(rsc_dir))
         self.sv_tgt_dir = StringVar()
         self.sv_tgt_dir.set(str(tgt_dir))
-        self.meta_info.set_dirs(src_dir, tgt_dir)
+        self.meta_info.set_dirs(rsc_dir, tgt_dir)
 
         # Source directory
         lbl1 = Label(self.window, text="Source directory:")
         lbl1.grid(row=self.row_idx, column=0, padx=PAD_X, pady=PAD_Y, sticky="EW")
-        lbl_src_dir = Label(self.window, textvariable=self.sv_src_dir)
-        lbl_src_dir.grid(
+        lbl_rsc_dir = Label(self.window, textvariable=self.sv_rsc_dir)
+        lbl_rsc_dir.grid(
             row=self.row_idx,
             column=1,
             columnspan=1,
@@ -108,7 +108,7 @@ class GuiApp:
         btn_src = Button(
             self.window,
             text="Browse",
-            command=lambda: browse_button(self.sv_src_dir),
+            command=lambda: browse_button(self.sv_rsc_dir),
         )
         btn_src.grid(row=self.row(), column=2, padx=PAD_X, pady=PAD_Y, sticky="EW")
         Hovertip(btn_src, TooltipDict["btn_src"])

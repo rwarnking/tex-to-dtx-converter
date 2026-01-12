@@ -1,9 +1,18 @@
+import os
 import re
+import sys
 from datetime import date
 from pathlib import Path
 from typing import TypedDict
 
 from meta_information import MetaInformation
+
+if getattr(sys, "frozen", False):
+    # If the application is run as a bundle, the PyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app path
+    TEMPLATE_PATH = Path(os.path.dirname(sys.executable)) / "tex_templates"
+else:
+    TEMPLATE_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / "tex_templates"
 
 
 class ParsedObject(TypedDict):
@@ -20,24 +29,28 @@ class ParsedCommand(TypedDict):
     desc: list[str]
     todos: list[str]
     errors: list[str]
-    equation: None | str
-    example: str
+    equation: list[str]
+    example: list[str]
     private: bool
 
 
 class Converter:
+    """
+    https://www.texdev.net/2009/10/06/a-model-dtx-file/
+    """
+
     def __init__(self, meta_info: MetaInformation):
         self.meta_info = meta_info
 
     def execute(self):
-        src_dir: Path = self.meta_info.src_dir
+        rsc_dir: Path = self.meta_info.rsc_dir
 
-        self.meta_info.set_max_file_count(len(list(src_dir.iterdir())))
+        self.meta_info.set_max_file_count(len(list(rsc_dir.iterdir())))
 
-        self._load_package_metainfo(src_dir)
+        self._load_package_metainfo(rsc_dir)
 
         parsed_tex: dict[str, list[ParsedObject]] = {}
-        for file_dir in list(src_dir.iterdir()):
+        for file_dir in list(rsc_dir.iterdir()):
             ext = file_dir.suffix
 
             if ext == ".tex":
@@ -49,7 +62,7 @@ class Converter:
             self.meta_info.incr_file_count()
 
         # Save all data to one dtx
-        res_dtx = self._tex_to_dtx(src_dir / "docu", parsed_tex)
+        res_dtx = self._tex_to_dtx(rsc_dir / "docu", parsed_tex)
         # TODO
         self._save_to_dir(f"{self.pkg_meta['pkg_name']}.dtx", res_dtx)
 
@@ -62,7 +75,7 @@ class Converter:
         with open(tgt_dir / filename, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def _load_package_metainfo(self, src_dir: Path):
+    def _load_package_metainfo(self, rsc_dir: Path):
         # default setup
         self.pkg_meta: dict[str, str | float] = {
             "pkg_name": "SamplePackage",
@@ -74,7 +87,7 @@ class Converter:
             "pkg_info_text": "Info text",
         }
 
-        pkginfo_file_path = src_dir / "package_config.txt"
+        pkginfo_file_path = rsc_dir / "package_config.txt"
         # Load file if it exists, otherwise use default
         if pkginfo_file_path.exists():
             with pkginfo_file_path.open("r", encoding="utf-8") as f:
@@ -129,12 +142,15 @@ class Converter:
 
         return tex_objects
 
-    def _tex_to_dtx(self, src_dir: Path, parsed_tex: dict[str, list[ParsedObject]]) -> str:
+    def _tex_to_dtx(self, rsc_dir: Path, parsed_tex: dict[str, list[ParsedObject]]) -> str:
         docu_output = ""
         impl_output = ""
+        impl_output += "%    \\begin{macrocode}\n"
+        impl_output += "%<*package>\n"
+        impl_output += "%    \\end{macrocode}\n\n"
 
         output = ""
-        output += self._add_header(src_dir)
+        output += self._add_header(rsc_dir)
 
         for key, value in parsed_tex.items():
             cur_docu_output = ""
@@ -144,13 +160,13 @@ class Converter:
             # docu_output += "% \\localtableofcontents*\n"
 
             docu_table = "% \\begin{center}\n"
-            docu_table += "% \\begin{tabularx}{\\textwidth}{l p{3cm} l} \\hline\n"
+            docu_table += "% \\begin{tabularx}{\\textwidth}{l l l} \\hline\n"
             docu_table += "% \\textbf{Command} & \\textbf{Arguments} & "
-            docu_table += "\\textbf{Short Description} \\\\ \\hline\n"
+            docu_table += "\\textbf{Default Argument} \\\\ \\hline\n"
             impl_table = "% \\begin{center}\n"
-            impl_table += "% \\begin{tabularx}{\\textwidth}{l p{3cm} l} \\hline\n"
+            impl_table += "% \\begin{tabularx}{\\textwidth}{l l l} \\hline\n"
             impl_table += "% \\textbf{Command} & \\textbf{Arguments} & "
-            impl_table += "\\textbf{Short Description} \\\\ \\hline\n"
+            impl_table += "\\textbf{Default Argument} \\\\ \\hline\n"
 
             cur_impl_output = ""
             # cur_impl_output = f"% \\subsection{{{key}}}\n"
@@ -166,50 +182,63 @@ class Converter:
                         cur_impl_output += obj_impl
 
                         if cmd["oarg_default"]:
-                            args_str = f"\\oarg{{{cmd["oarg"][0]}}}\n"
+                            args_str = f"\\oarg{{{cmd["oarg"][0]}}}, "
                         else:
                             args_str = ""
                         args_str += ", ".join([f"\\marg{{{e[0]}}}" for e in cmd["args"]])
                         docu_table += f"% \\ref{{macro:{cmd['name']}}} & "
-                        docu_table += f"{args_str} & Another macro description.\\\\\n"
+                        docu_table += f"{args_str} & "
+                        # docu_table += f"{args_str} & Another macro description.\\\\\n"
                         impl_table += f"% \\ref{{macro:{cmd['name']}}} & "
-                        impl_table += f"{args_str} & Another macro description.\\\\\n"
+                        impl_table += f"{args_str} & "
+                        # impl_table += f"{args_str} & Another macro description."
+                        if cmd["oarg_default"]:
+                            impl_table += f"{cmd['oarg_default']}\\\\\n"
+                            docu_table += f"{cmd['oarg_default']}\\\\\n"
+                        else:
+                            impl_table += "\\\\\n"
+                            docu_table += "\\\\\n"
 
             docu_table += "% \\end{tabularx}\n"
             docu_table += "% \\end{center}\n"
             impl_table += "% \\end{tabularx}\n"
-            impl_table += "% \\end{center}\n"
+            impl_table += "% \\end{center}\n\n"
             docu_output += f"% \\subsection{{{key}}}\n" + docu_table + cur_docu_output
             impl_output += f"% \\subsection{{{key}}}\n" + impl_table + cur_impl_output
 
+        impl_output += "%    \\begin{macrocode}\n"
+        impl_output += "%</package>\n"
+        impl_output += "%    \\end{macrocode}\n"
+
         output += "% \\section{Macro Documentation}\n"
         output += docu_output
-        output += "% \\StopEventually{\\PrintIndex}\n\n"
-        output += "% \\section{Implementation}\n"
+        # output += "% \\StopEventually{\\PrintIndex}\n\n"
+        output += "\n"
+        output += "% \\section{Implementation}\n\n"
         output += impl_output
 
         return output
 
-    def _add_header(self, src_dir: Path) -> str:
+    def _add_header(self, rsc_dir: Path) -> str:
         header = ""
 
-        header += self._fill_template(Path("src/core/tex_templates/01_head.tex"))
-        header += self._fill_template(Path("src/core/tex_templates/02_preamble_template.tex"))
-        header += self._fill_template(Path("src/core/tex_templates/03_postamble_template.tex"))
-        header += self._fill_template(Path("src/core/tex_templates/04_generate_template.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("01_head.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("02_preamble_template.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("03_postamble_template.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("04_generate_template.tex"))
 
         # Load packages (no template)
-        with open(src_dir / "packages_and_settings.tex", encoding="utf-8") as f:
+        with open(rsc_dir / "packages_and_settings.tex", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
                 header += line
         header += "\n"
 
-        header += self._fill_template(Path("src/core/tex_templates/05_predocument.tex"))
-        header += self._fill_template(Path("src/core/tex_templates/06_document_template.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("05_predocument.tex"))
+        header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
 
         introduction = ""
-        with open(src_dir / "introduction.tex", encoding="utf-8") as f:
+        with open(rsc_dir / "introduction.tex", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
                 introduction += f"% {line}"
@@ -229,8 +258,8 @@ class Converter:
             "desc": [],
             "todos": [],
             "errors": [],
-            "equation": None,
-            "example": "",
+            "equation": [],
+            "example": [],
             "private": False,
         }
         found_command_start = False
@@ -259,11 +288,11 @@ class Converter:
             elif line.startswith("% TODO") and not found_command_start:
                 command["todos"].append(line)
             elif line.startswith("% Equation") and not found_command_start:
-                command["equation"] = line.split("% Equation:")[1]
+                command["equation"].append(line)
             elif line.startswith("% Example") and not found_command_start:
-                command["example"] += line.split("% Example:")[1] + "\n"
+                command["example"].append(line)
             elif line.startswith("% Error") and not found_command_start:
-                command["errors"].append(line.split("% Error:")[1])
+                command["errors"].append(line)
             elif line.startswith("% ") and not found_command_start:
                 command["desc"].append(line)
 
@@ -273,31 +302,31 @@ class Converter:
 
         # Construct command documentation string
         obj_docu += (
-            f"% \\setlabel{{\\textbackslash {command['name']}}}{{macro:{command['name']}}}\n"
+            f"\n% \\setlabel{{\\textbackslash {command['name']}}}{{macro:{command['name']}}}\n"
         )
         obj_docu += f"% \\DescribeMacro{{{command['name']}}}\n"
 
         if command["oarg_default"]:
-            obj_docu += f"\\oarg{{{command['oarg'][0]}}}\n"
+            obj_docu += f"% \\oarg{{{command['oarg'][0]}}}"
+        else:
+            obj_docu += "% "
         obj_docu += "".join([f"\\marg{{{e[0]}}}" for e in command["args"]])
-        obj_docu += "\n\n"
+        obj_docu += "\\\\\n"
 
         if command["oarg_default"]:
-            obj_docu += f"\\oarg{{{command['oarg'][0]}}}: {command['oarg'][1]}, "
-            obj_docu += f"default: {command['oarg_default']}\n\n"
+            obj_docu += f"% \\oarg{{{command['oarg'][0]}}}: {command['oarg'][1]}, "
+            obj_docu += f"default: {command['oarg_default']}\\\\\n"
         for arg in command["args"]:
-            obj_docu += f"\\marg{{{arg[0]}}}: {arg[1]}\n\n"
+            obj_docu += f"% \\marg{{{arg[0]}}}: {arg[1]}\\\\\n"
         obj_docu += "\n"
         obj_docu += "".join(command["desc"])
         obj_docu += "\n"
-        if command["equation"]:
-            obj_docu += (
-                f"\\begin{{equationbox}}Equation: {command['equation']}\\end{{equationbox}}"
-            )
-        if command["example"]:
-            obj_docu += f"\\begin{{examplebox}}{command['example']}\\end{{examplebox}}"
-        for error in command["errors"]:
-            obj_docu += f"\\begin{{warningbox}}Error: {error}\\end{{warningbox}}"
+        if len(command["equation"]) > 0:
+            obj_docu += self._add_equation_box(command["equation"])
+        if len(command["example"]) > 0:
+            obj_docu += self._add_example_box(command["example"])
+        if len(command["errors"]) > 0:
+            obj_docu += self._add_warning_box(command["errors"])
 
         # Filter documentation text for param numbers (e.g. #2)
         def replace_match(match):
@@ -331,3 +360,43 @@ class Converter:
         else:
             print(f"File {file_path} does not exist.")
             return ""
+
+    # TODO these tree can be merged into one generic function
+    def _add_example_box(self, example_strs: list[str]) -> str:
+        example = "% \\begin{examplebox}\n"
+
+        for line in example_strs[:-1]:
+            _line = line.split("% Example:")[1].strip()
+            example += f"%   {_line}\\\\\n"
+        _line = example_strs[-1].split("% Example:")[1].strip()
+        example += f"%   {_line}\n"
+
+        example += "% \\end{examplebox}\n"
+
+        return example
+
+    def _add_equation_box(self, equation_strs: list[str]) -> str:
+        equation = "% \\begin{equationbox}\n"
+
+        for line in equation_strs[:-1]:
+            _line = line.split("% Equation:")[1].strip()
+            equation += f"%   {_line}\\\\\n"
+        _line = equation_strs[-1].split("% Equation:")[1].strip()
+        equation += f"%   {_line}\n"
+
+        equation += "% \\end{equationbox}\n"
+
+        return equation
+
+    def _add_warning_box(self, warning_strs: list[str]) -> str:
+        warning = "% \\begin{warningbox}\n"
+
+        for line in warning_strs[:-1]:
+            _line = line.split("% Error:")[1].strip()
+            warning += f"%   {_line}\\\\\n"
+        _line = warning_strs[-1].split("% Error:")[1].strip()
+        warning += f"%   {_line}\n"
+
+        warning += "% \\end{warningbox}\n"
+
+        return warning

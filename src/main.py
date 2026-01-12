@@ -19,10 +19,10 @@ def main():
 
     # TODO there is no check in place whether the given or default path exist
     parser.add_argument(
-        "--source-dir",
+        "--resource-dir",
         type=Path,
-        default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "source")),
-        help="Source directory path",
+        default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "resources")),
+        help="Resource directory path",
     )
 
     parser.add_argument(
@@ -37,11 +37,11 @@ def main():
     if args.gui:
         from gui.main_window import GuiApp
 
-        GuiApp(args.source_dir, args.target_dir)
+        GuiApp(args.resource_dir, args.target_dir)
     else:
         from cli import CliApp
 
-        cli_app = CliApp(args.source_dir, args.target_dir)
+        cli_app = CliApp(args.resource_dir, args.target_dir)
         cli_app.run()
 
 
