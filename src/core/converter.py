@@ -31,12 +31,14 @@ class ParsedCommand(TypedDict):
     errors: list[str]
     equation: list[str]
     example: list[str]
+    implementation: list[str]
     private: bool
 
 
 class Converter:
     """
     https://www.texdev.net/2009/10/06/a-model-dtx-file/
+    https://www.tug.org/TUGboat/tb29-2/tb92pakin.pdf
     """
 
     def __init__(self, meta_info: MetaInformation):
@@ -145,9 +147,11 @@ class Converter:
     def _tex_to_dtx(self, rsc_dir: Path, parsed_tex: dict[str, list[ParsedObject]]) -> str:
         docu_output = ""
         impl_output = ""
-        impl_output += "%    \\begin{macrocode}\n"
+        # impl_output += "%    \\begin{macrocode}\n"
+        # impl_output += "%    \\end{macrocode}\n\n"
+        impl_output += "% \\iffalse\n"
         impl_output += "%<*package>\n"
-        impl_output += "%    \\end{macrocode}\n\n"
+        impl_output += "% \\fi\n"
 
         output = ""
         output += self._add_header(rsc_dir)
@@ -160,13 +164,13 @@ class Converter:
             # docu_output += "% \\localtableofcontents*\n"
 
             docu_table = "% \\begin{center}\n"
-            docu_table += "% \\begin{tabularx}{\\textwidth}{l l l} \\hline\n"
-            docu_table += "% \\textbf{Command} & \\textbf{Arguments} & "
-            docu_table += "\\textbf{Default Argument} \\\\ \\hline\n"
+            docu_table += "% \\begin{tabularx}{\\textwidth}{l p{8cm}} \\hline\n"
+            docu_table += "% \\textbf{Command} & \\textbf{Arguments} "
+            docu_table += "\\\\ \\hline\n"
             impl_table = "% \\begin{center}\n"
-            impl_table += "% \\begin{tabularx}{\\textwidth}{l l l} \\hline\n"
-            impl_table += "% \\textbf{Command} & \\textbf{Arguments} & "
-            impl_table += "\\textbf{Default Argument} \\\\ \\hline\n"
+            impl_table += "% \\begin{tabularx}{\\textwidth}{l p{8cm}} \\hline\n"
+            impl_table += "% \\textbf{Command} & \\textbf{Arguments} "
+            impl_table += "\\\\ \\hline\n"
 
             cur_impl_output = ""
             # cur_impl_output = f"% \\subsection{{{key}}}\n"
@@ -187,17 +191,19 @@ class Converter:
                             args_str = ""
                         args_str += ", ".join([f"\\marg{{{e[0]}}}" for e in cmd["args"]])
                         docu_table += f"% \\ref{{macro:{cmd['name']}}} & "
-                        docu_table += f"{args_str} & "
-                        # docu_table += f"{args_str} & Another macro description.\\\\\n"
-                        impl_table += f"% \\ref{{macro:{cmd['name']}}} & "
-                        impl_table += f"{args_str} & "
-                        # impl_table += f"{args_str} & Another macro description."
+                        docu_table += "\\makecell[t{p{8cm}}]{"
+                        docu_table += f"{args_str}"
                         if cmd["oarg_default"]:
-                            impl_table += f"{cmd['oarg_default']}\\\\\n"
-                            docu_table += f"{cmd['oarg_default']}\\\\\n"
-                        else:
-                            impl_table += "\\\\\n"
-                            docu_table += "\\\\\n"
+                            docu_table += f"\\\\Default Argument: {cmd['oarg_default']}"
+                        docu_table += "} \\\\\n"
+                        # docu_table += f"{args_str} & Another macro description.\\\\\n"
+
+                        impl_table += f"% \\ref{{macro:{cmd['name']}}} & "
+                        impl_table += "\\makecell[t{p{8cm}}]{"
+                        impl_table += f"{args_str}"
+                        if cmd["oarg_default"]:
+                            impl_table += f"\\\\{cmd['oarg_default']}"
+                        impl_table += "} \\\\\n"
 
             docu_table += "% \\end{tabularx}\n"
             docu_table += "% \\end{center}\n"
@@ -206,9 +212,11 @@ class Converter:
             docu_output += f"% \\subsection{{{key}}}\n" + docu_table + cur_docu_output
             impl_output += f"% \\subsection{{{key}}}\n" + impl_table + cur_impl_output
 
-        impl_output += "%    \\begin{macrocode}\n"
-        impl_output += "%</package>\n"
-        impl_output += "%    \\end{macrocode}\n"
+        # impl_output += "%    \\begin{macrocode}\n"
+        # impl_output += "%    \\end{macrocode}\n"
+        impl_output += "% \\iffalse\n"
+        impl_output += "%<*package>\n"
+        impl_output += "% \\fi\n"
 
         output += "% \\section{Macro Documentation}\n"
         output += docu_output
@@ -228,6 +236,9 @@ class Converter:
         header += self._fill_template(TEMPLATE_PATH / Path("04_generate_template.tex"))
 
         # Load packages (no template)
+        # TODO differentiate between packages that are required by the converter
+        # and those that are required by the documentation
+        # the first should not be user defined
         with open(rsc_dir / "packages_and_settings.tex", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
@@ -260,13 +271,12 @@ class Converter:
             "errors": [],
             "equation": [],
             "example": [],
+            "implementation": [],
             "private": False,
         }
         found_command_start = False
         for line in command_obj["o_content"]:
-            if line.startswith("% Private"):
-                command["private"] = True
-            elif line.startswith("\\newcommand"):
+            if line.startswith("\\newcommand"):
                 match = re.search(r"\\newcommand\\(\w+)", line)
                 if match:
                     # print(match.group(1))
@@ -281,20 +291,26 @@ class Converter:
 
                 # print(pattern.search("text[3][Result]").group(1))
                 # print(pattern.search("text[3]").group(1))
-            elif line.startswith("% #"):
-                match = re.search(r"#\d+\s+([^,]+),\s*(.+)$", line)
-                if match:
-                    command["args"].append((match.group(1), match.group(2)))
-            elif line.startswith("% TODO") and not found_command_start:
-                command["todos"].append(line)
-            elif line.startswith("% Equation") and not found_command_start:
-                command["equation"].append(line)
-            elif line.startswith("% Example") and not found_command_start:
-                command["example"].append(line)
-            elif line.startswith("% Error") and not found_command_start:
-                command["errors"].append(line)
-            elif line.startswith("% ") and not found_command_start:
-                command["desc"].append(line)
+
+            if not found_command_start:
+                if line.startswith("% Private"):
+                    command["private"] = True
+                elif line.startswith("% #"):
+                    match = re.search(r"#\d+\s+([^,]+),\s*(.+)$", line)
+                    if match:
+                        command["args"].append((match.group(1), match.group(2)))
+                elif line.startswith("% TODO"):
+                    command["todos"].append(line)
+                elif line.startswith("% Equation"):
+                    command["equation"].append(line)
+                elif line.startswith("% Example"):
+                    command["example"].append(line)
+                elif line.startswith("% Error"):
+                    command["errors"].append(line)
+                elif line.startswith("% "):
+                    command["desc"].append(line)
+            else:
+                command["implementation"].append(line)
 
         if command["oarg_default"]:
             command["oarg"] = command["args"][0]
@@ -311,38 +327,75 @@ class Converter:
         else:
             obj_docu += "% "
         obj_docu += "".join([f"\\marg{{{e[0]}}}" for e in command["args"]])
-        obj_docu += "\\\\\n"
+        obj_docu += "\\\\[1mm]\n"
 
         if command["oarg_default"]:
             obj_docu += f"% \\oarg{{{command['oarg'][0]}}}: {command['oarg'][1]}, "
             obj_docu += f"default: {command['oarg_default']}\\\\\n"
         for arg in command["args"]:
-            obj_docu += f"% \\marg{{{arg[0]}}}: {arg[1]}\\\\\n"
-        obj_docu += "\n"
-        obj_docu += "".join(command["desc"])
-        obj_docu += "\n"
+            obj_docu += f"% \\marg{{{arg[0]}}}: {arg[1]}"
+            if not arg == command["args"][-1]:
+                obj_docu += "\\\\\n"
+            else:
+                obj_docu += "\n"
+        # obj_docu += "\n"
+        # obj_docu += "".join(command["desc"])
+        # obj_docu += "\n"
+
+        box_added = False
+        if len(command["desc"]) > 0:
+            obj_docu += self._add_description_box(command["desc"])
+            box_added = True
         if len(command["equation"]) > 0:
             obj_docu += self._add_equation_box(command["equation"])
+            box_added = True
         if len(command["example"]) > 0:
             obj_docu += self._add_example_box(command["example"])
+            box_added = True
         if len(command["errors"]) > 0:
             obj_docu += self._add_warning_box(command["errors"])
+            box_added = True
+
+        if not box_added:
+            obj_docu += "\n"
 
         # Filter documentation text for param numbers (e.g. #2)
         def replace_match(match):
             n = int(match.group(1))
-            if n - 1 >= len(command["args"]):
+
+            options = command["args"]
+            if command["oarg_default"]:
+                options = [command["oarg"]] + options
+
+            if n - 1 >= len(options):
                 print(f"Replacement error: list not long enough {command['name']}")
                 return f"param {n}"
-            return command["args"][n - 1][0]
+            return options[n - 1][0]
 
         obj_docu = re.sub(r"#(\d+)", replace_match, obj_docu)
 
         # Construct command implementation string
         obj_impl += f"% \\begin{{macro}}{{\\{command['name']}}}\n"
+
+        desc_str = "".join(command["desc"]) + "% \n"
+        obj_impl += re.sub(r"#(\d+)", replace_match, desc_str)
+
+        param_n = 1
+        if command["oarg_default"]:
+            obj_impl += f"% \\#{param_n} - {command['oarg'][0]}: "
+            obj_impl += f"{command['oarg'][1].replace("#", "\\#")}\\\\\n"
+            param_n += 1
+        for arg in command["args"]:
+            obj_impl += f"% \\#{param_n} - {arg[0]}: {arg[1].replace("#", "\\#")}"
+            param_n += 1
+            if not arg == command["args"][-1]:
+                obj_impl += "\\\\\n"
+            else:
+                obj_impl += "\n"
+
         obj_impl += "%    \\begin{macrocode}\n"
 
-        obj_impl += "".join(command_obj["o_content"])
+        obj_impl += "".join(command["implementation"])
 
         obj_impl += "%    \\end{macrocode}\n"
         obj_impl += "% \\end{macro}\n\n"
@@ -360,6 +413,12 @@ class Converter:
         else:
             print(f"File {file_path} does not exist.")
             return ""
+
+    def _add_description_box(self, desc_strs: list[str]) -> str:
+        description = "% \\begin{descriptionbox}\n"
+        description += "".join(desc_strs)
+        description += "% \\end{descriptionbox}\n"
+        return description
 
     # TODO these tree can be merged into one generic function
     def _add_example_box(self, example_strs: list[str]) -> str:
