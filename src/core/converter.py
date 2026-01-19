@@ -178,10 +178,15 @@ class Converter:
             # impl_output += "% \\etocsetnexttocdepth{3}\n"
             # impl_output += "% \\localtableofcontents*\n"
 
+            # For private functions
+            footer = ""
+
             for obj in value:
                 if obj["o_type"] == "command":
                     obj_docu, obj_impl, cmd = self._parse_command(obj)
-                    if not cmd["private"]:
+                    if cmd["private"]:
+                        footer += obj_impl
+                    else:
                         cur_docu_output += obj_docu
                         cur_impl_output += obj_impl
 
@@ -198,7 +203,7 @@ class Converter:
                         docu_table += "} \\\\\n"
                         # docu_table += f"{args_str} & Another macro description.\\\\\n"
 
-                        impl_table += f"% \\ref{{macro:{cmd['name']}}} & "
+                        impl_table += f"% \\ref{{macro:{cmd['name']}_impl}} & "
                         impl_table += "\\makecell[t{p{8cm}}]{"
                         impl_table += f"{args_str}"
                         if cmd["oarg_default"]:
@@ -209,8 +214,9 @@ class Converter:
             docu_table += "% \\end{center}\n"
             impl_table += "% \\end{tabularx}\n"
             impl_table += "% \\end{center}\n\n"
-            docu_output += f"% \\subsection{{{key}}}\n" + docu_table + cur_docu_output
-            impl_output += f"% \\subsection{{{key}}}\n" + impl_table + cur_impl_output
+            docu_output += f"% \\subsection{{{key}}}\n" + f"% \\label{{subsec:{key}}}\n"
+            docu_output += docu_table + cur_docu_output
+            impl_output += f"% \\subsection{{{key}}}\n" + impl_table + cur_impl_output + footer
 
         # impl_output += "%    \\begin{macrocode}\n"
         # impl_output += "%    \\end{macrocode}\n"
@@ -233,29 +239,48 @@ class Converter:
         header += self._fill_template(TEMPLATE_PATH / Path("01_head.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("02_preamble_template.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("03_postamble_template.tex"))
+
+        pkg_packages_str = ""
+        with open(rsc_dir / "pkg_packages.tex", encoding="utf-8") as f:
+            lines = f.readlines()
+            for line in lines:
+                pkg_packages_str += f"{line}"
+        self.pkg_meta["pkg_packages"] = pkg_packages_str
         header += self._fill_template(TEMPLATE_PATH / Path("04_generate_template.tex"))
 
         # Load packages (no template)
         # TODO differentiate between packages that are required by the converter
         # and those that are required by the documentation
         # the first should not be user defined
-        with open(rsc_dir / "packages_and_settings.tex", encoding="utf-8") as f:
+        with open(rsc_dir / "docu_packages_and_settings.tex", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
                 header += line
         header += "\n"
 
         header += self._fill_template(TEMPLATE_PATH / Path("05_predocument.tex"))
-        header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
+        # header += self._fill_template(TEMPLATE_PATH / Path("06_begin_document_template.tex"))
 
-        introduction = ""
+        introduction_str = ""
         with open(rsc_dir / "introduction.tex", encoding="utf-8") as f:
             lines = f.readlines()
-            for line in lines:
-                introduction += f"% {line}"
-        introduction += "\n"
+            introduction_str += f"{lines[0]}"
+            for line in lines[1:]:
+                introduction_str += f"    {line}"
+        self.pkg_meta["pkg_introduction"] = introduction_str
 
-        return header + introduction
+        example_str = ""
+        with open(rsc_dir / "example.tex", encoding="utf-8") as f:
+            lines = f.readlines()
+            example_str += f"{lines[0]}"
+            for line in lines[1:]:
+                example_str += f"    {line}"
+        self.pkg_meta["pkg_example"] = example_str
+
+        header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
+        header += "\n"
+
+        return header
 
     def _parse_command(self, command_obj) -> tuple[str, str, ParsedCommand]:
         obj_docu = ""
@@ -375,6 +400,10 @@ class Converter:
         obj_docu = re.sub(r"#(\d+)", replace_match, obj_docu)
 
         # Construct command implementation string
+        obj_impl += (
+            f"\n% \\setlabel{{\\textbackslash {command['name']}}}{{macro:{command['name']}_impl}}"
+        )
+        obj_impl += "\n"
         obj_impl += f"% \\begin{{macro}}{{\\{command['name']}}}\n"
 
         desc_str = "".join(command["desc"]) + "% \n"
