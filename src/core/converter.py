@@ -137,7 +137,7 @@ class Converter:
                         "o_category": file_dir,
                     }
                 elif cur_object["o_type"] is None and line.rstrip() != "":
-                    print(f"Unprocessed line: {line}.")
+                    print(f"Unprocessed line: {line.strip()}.")
 
                 if cur_object["o_type"] == "command" or cur_object["o_type"] == "comment":
                     cur_object["o_content"].append(line)
@@ -272,6 +272,7 @@ class Converter:
         example_str = ""
         with open(rsc_dir / "example.tex", encoding="utf-8") as f:
             lines = f.readlines()
+            # TODO this break if the file exists but is empty
             example_str += f"{lines[0]}"
             for line in lines[1:]:
                 example_str += f"    {line}"
@@ -337,15 +338,15 @@ class Converter:
             else:
                 command["implementation"].append(line)
 
-        if command["oarg_default"]:
-            command["oarg"] = command["args"][0]
-            command["args"] = command["args"][1:]
-
         # Construct command documentation string
         obj_docu += (
             f"\n% \\setlabel{{\\textbackslash {command['name']}}}{{macro:{command['name']}}}\n"
         )
         obj_docu += f"% \\DescribeMacro{{{command['name']}}}\n"
+
+        if command["oarg_default"] and len(command["args"]) > 0:
+            command["oarg"] = command["args"][0]
+            command["args"] = command["args"][1:]
 
         if command["oarg_default"]:
             obj_docu += f"% \\oarg{{{command['oarg'][0]}}}"
@@ -367,12 +368,66 @@ class Converter:
         # obj_docu += "".join(command["desc"])
         # obj_docu += "\n"
 
+        # TODO
+        # Filter documentation text for param numbers (e.g. #2)
+        def replace_match_short(match):
+            n = int(match.group(1))
+
+            options = command["args"]
+            if command["oarg_default"]:
+                options = [command["oarg"]] + options
+
+            if n - 1 >= len(options):
+                print(f"Replacement error: list not long enough {command['name']}")
+                return f"param {n}"
+
+            var_components = options[n - 1][0].split(" ")
+
+            var_type = var_components[0]
+            if len(var_components) == 1:
+                var_name = var_components[0]
+            else:
+                var_name = var_components[1]
+
+            if "matri" in var_type:
+                if var_type[-1] == "s":
+                    var_name = var_name[0] + var_name[-1]
+                else:
+                    var_name = var_name[0]
+                var_name = f"\\mathbf{{{var_name.upper()}}}"
+            elif "vector" in var_type:
+                if var_type[-1] == "s":
+                    var_name = var_name[0] + var_name[-1]
+                else:
+                    var_name = var_name[0]
+                var_name = f"\\mathbf{{{var_name}}}"
+            else:
+                var_name = var_name[0]
+
+            # if len(var_components) == 1:
+            #     var_name = var_components[0]
+            #     if var_name == "vectors" or var_name == "matrices":
+            #         var_name = var_name[0] + var_name[-1]
+            #     else:
+            #         var_name = var_name[0]
+            # else:
+            #     var_name = var_components[1]
+
+            # if var_name == "m":
+            #     var_name = f"\\mathbf{{{var_name.upper()}}}"
+            # if var_name == "v" or var_name == "w" or var_name == "vs":
+            #     var_name = f"\\mathbf{{{var_name}}}"
+
+            return var_name
+
         box_added = False
         if len(command["desc"]) > 0:
             obj_docu += self._add_description_box(command["desc"])
             box_added = True
         if len(command["equation"]) > 0:
-            obj_docu += self._add_equation_box(command["equation"])
+            tmp_str = self._add_equation_box(command["equation"])
+            tmp_str = re.sub(r"#(\d+)", replace_match_short, tmp_str)
+            obj_docu += tmp_str
             box_added = True
         if len(command["example"]) > 0:
             obj_docu += self._add_example_box(command["example"])
