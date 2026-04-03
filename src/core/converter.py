@@ -87,6 +87,7 @@ class Converter:
             "pkg_date": date.today().strftime("%Y/%m/%d"),
             "pkg_version": 1.0,
             "pkg_info_text": "Info text",
+            "pkg_license_name": "test license name",
         }
 
         pkginfo_file_path = rsc_dir / "package_config.txt"
@@ -285,7 +286,7 @@ class Converter:
             license_str += f"{lines[0]}"
             for line in lines[1:]:
                 license_str += f"    {line}"
-        self.pkg_meta["pkg_license"] = license_str
+        self.pkg_meta["pkg_license_text"] = license_str
 
         header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
         header += "\n"
