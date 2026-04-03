@@ -237,6 +237,16 @@ class Converter:
     def _add_header(self, rsc_dir: Path) -> str:
         header = ""
 
+        # Read license first such that other components can also use its content
+        license_str = ""
+        with open(rsc_dir / "license.txt", encoding="utf-8") as f:
+            lines = f.readlines()
+            # TODO this breaks if the file exists but is empty
+            license_str += f"{lines[0]}"
+            for line in lines[1:]:
+                license_str += f"    {line}"
+        self.pkg_meta["pkg_license_text"] = license_str
+
         header += self._fill_template(TEMPLATE_PATH / Path("01_head.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("02_preamble_template.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("03_postamble_template.tex"))
@@ -278,15 +288,6 @@ class Converter:
             for line in lines[1:]:
                 example_str += f"    {line}"
         self.pkg_meta["pkg_example"] = example_str
-
-        license_str = ""
-        with open(rsc_dir / "license.txt", encoding="utf-8") as f:
-            lines = f.readlines()
-            # TODO this breaks if the file exists but is empty
-            license_str += f"{lines[0]}"
-            for line in lines[1:]:
-                license_str += f"    {line}"
-        self.pkg_meta["pkg_license_text"] = license_str
 
         header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
         header += "\n"
