@@ -272,11 +272,20 @@ class Converter:
         example_str = ""
         with open(rsc_dir / "example.tex", encoding="utf-8") as f:
             lines = f.readlines()
-            # TODO this break if the file exists but is empty
+            # TODO this breaks if the file exists but is empty
             example_str += f"{lines[0]}"
             for line in lines[1:]:
                 example_str += f"    {line}"
         self.pkg_meta["pkg_example"] = example_str
+
+        license_str = ""
+        with open(rsc_dir / "license.txt", encoding="utf-8") as f:
+            lines = f.readlines()
+            # TODO this breaks if the file exists but is empty
+            license_str += f"{lines[0]}"
+            for line in lines[1:]:
+                license_str += f"    {line}"
+        self.pkg_meta["pkg_license"] = license_str
 
         header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
         header += "\n"
