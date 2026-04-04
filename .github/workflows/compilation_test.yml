@@ -1,0 +1,104 @@
+#################################
+#################################
+## Action for Test Compilation ##
+#################################
+#################################
+name: Test Compilation
+
+# Allow to call this workflow by other workflows
+on:
+  workflow_call:
+
+# Set the Jobs
+jobs:
+  ##############
+  # Create dtx #
+  ##############
+  create_dtx:
+    # Name the Job
+    name: Create .dtx file
+    # Set the agent to run on
+    runs-on: ubuntu-latest
+
+    # Load all steps
+    steps:
+      # Checkout the code base
+      - name: Checkout repo content
+        uses: actions/checkout@v6
+      # Setup python
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.13
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+      # Execute python script
+      - name: Execute Converter
+        run: |
+          python -u src/main.py \
+            --resource-dir tests/data \
+            --target-dir tests/results
+      - name : Show Files
+        run : "ls -R"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-dtx-file
+          path: tests/results/tex-to-dtx-converter.dtx
+          retention-days: 1
+
+  ###############
+  # Compile dtx #
+  ###############
+  build_latex:
+    # Name the Job
+    name: Compile PDF
+    # Set the agent to run on
+    runs-on: ubuntu-latest
+    # Requires
+    needs: create_dtx
+
+    permissions:
+      contents: write
+      actions: read
+
+    ##################
+    # Load all steps #
+    ##################
+    steps:
+      ##########################
+      # Checkout the code base #
+      ##########################
+      - name: Set up Git repository
+        uses: actions/checkout@v6
+      - name: Download artifact (dtx file)
+        uses: actions/download-artifact@v4
+        with:
+          name: shared-dtx-file
+      ####################
+      # Run the compiler #
+      ####################
+      - name: Move .dtx File
+        run: |
+          mkdir -p tests/results
+          mv tex-to-dtx-converter.dtx tests/results/
+      - name: Compile LaTeX document
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: "tex-to-dtx-converter.dtx"
+          glob_root_file: true
+          working_directory: tests/results
+      - name: Show Files
+        run: "ls -R"
+      ###################
+      # Push dtx commit #
+      ###################
+      - name: Auto commit created LaTeX files
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "Automated commit: Add created files during test compilation"
+          file_pattern: '*.dtx *.pdf *.ins *.sty *.txt'

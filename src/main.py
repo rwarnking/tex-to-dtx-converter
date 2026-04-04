@@ -21,14 +21,14 @@ def main():
     parser.add_argument(
         "--resource-dir",
         type=Path,
-        default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "resources")),
+        default=Path(os.path.normpath(APP_PATH / ".." / "tests" / "data")),
         help="Resource directory path",
     )
 
     parser.add_argument(
         "--target-dir",
         type=Path,
-        default=Path(os.path.normpath(APP_PATH / ".." / "test-data" / "target")),
+        default=Path(os.path.normpath(APP_PATH / ".." / "tests" / "results")),
         help="Target directory path",
     )
 

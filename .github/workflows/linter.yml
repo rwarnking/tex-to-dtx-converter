@@ -11,12 +11,9 @@ name: Lint Code Base
 # https://github.com/marketplace/actions/latex-linter-chktex
 #
 
-#############################
-# Start the job on all push #
-#############################
-on: [push, pull_request]
-
-permissions: {}
+# Allow to call this workflow by other workflows
+on:
+  workflow_call:
 
 ###############
 # Set the Job #

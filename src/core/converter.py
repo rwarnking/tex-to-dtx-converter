@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import TypedDict
 
+from logger import _logger
 from meta_information import MetaInformation
 
 if getattr(sys, "frozen", False):
@@ -59,37 +60,45 @@ class Converter:
                 section_name = file_dir.stem.split("_")[1]
                 parsed_tex[section_name] = self._parse_tex(file_dir)
             else:
-                print(f"Unknown file type for file {file_dir.stem}.")
+                _logger.error(f"Unknown file type for file {file_dir.stem}.")
 
             self.meta_info.incr_file_count()
 
         # Save all data to one dtx
         res_dtx = self._tex_to_dtx(rsc_dir / "docu", parsed_tex)
-        # TODO
         self._save_to_dir(f"{self.pkg_meta['pkg_name']}.dtx", res_dtx)
 
         self.meta_info.finished = True
 
     def _save_to_dir(self, filename: str, content: str):
+        """
+        Save the given content string is written to a file
+        with the given name.
+        """
         tgt_dir = self.meta_info.tgt_dir
-        print(tgt_dir / filename)
+        _logger.info(f"Try saving .dtx to file {tgt_dir / filename}.")
+
+        # Create the folder in case it does not exist yet
+        tgt_dir.mkdir(parents=True, exist_ok=True)
 
         with open(tgt_dir / filename, "w", encoding="utf-8") as f:
             f.write(content)
+            _logger.success("Successfully saved file.")
 
     def _load_package_metainfo(self, rsc_dir: Path):
         # default setup
         self.pkg_meta: dict[str, str | float] = {
-            "pkg_name": "SamplePackage",
-            "pkg_description": "TODO",
-            "pkg_author": "Sample author",
-            "pkg_author_email": "example@email.com",
+            "pkg_name": "Package Name: Default",
+            "pkg_description": "Description: Default",
+            "pkg_author": "Authorname: Default",
+            "pkg_author_email": "authoremail@default.com",
             "pkg_date": date.today().strftime("%Y/%m/%d"),
-            "pkg_version": 1.0,
-            "pkg_info_text": "Info text",
-            "pkg_license_name": "test license name",
+            "pkg_version": "1.0.0",
+            "pkg_info_text": "Info Text: Default",
+            "pkg_license_name": "License: Default",
         }
 
+        _logger.info(f"Loading metadata from {rsc_dir}.")
         pkginfo_file_path = rsc_dir / "package_config.txt"
         # Load file if it exists, otherwise use default
         if pkginfo_file_path.exists():
@@ -101,6 +110,34 @@ class Converter:
                             self.pkg_meta[key] = date.today().strftime("%Y/%m/%d")
                         else:
                             self.pkg_meta[key] = value
+                        _logger.info(f"Loaded {key} with value {value}.")
+
+        if not Path(rsc_dir / "docu").exists():
+            _logger.warning(f"Path for loading files ({rsc_dir / 'docu'}) does not exist")
+            return
+
+        # Read all files from specified folder and save them
+        # Such that their content can be used to fill the templates.
+        # The files are allowed to contain some variables themselves,
+        # since their content is also scanned and vars are replaced.
+        for file_path in Path(rsc_dir / "docu").iterdir():
+            if not file_path.is_file():
+                continue
+
+            # TODO
+            result = self._fill_template(file_path)
+            # with open(file_path, encoding="utf-8") as f:
+            #     lines = f.readlines()
+
+            # if not lines:
+            #     result = ""
+            # else:
+            #     # Keep first line as-is, indent all following lines
+            #     first, *rest = lines
+            #     result = first + "".join(f"    {line.lstrip()}" for line in rest)
+
+            self.pkg_meta[file_path.name] = result
+            _logger.info(f"Loaded filecontents to {file_path.name}.")
 
     def _parse_tex(self, file_dir: Path) -> list[ParsedObject]:
         tex_objects: list[ParsedObject] = []
@@ -138,7 +175,7 @@ class Converter:
                         "o_category": file_dir,
                     }
                 elif cur_object["o_type"] is None and line.rstrip() != "":
-                    print(f"Unprocessed line: {line.strip()}.")
+                    _logger.warning(f"Unprocessed line: {line.strip()}.")
 
                 if cur_object["o_type"] == "command" or cur_object["o_type"] == "comment":
                     cur_object["o_content"].append(line)
@@ -192,7 +229,7 @@ class Converter:
                         cur_impl_output += obj_impl
 
                         if cmd["oarg_default"]:
-                            args_str = f"\\oarg{{{cmd["oarg"][0]}}}, "
+                            args_str = f"\\oarg{{{cmd['oarg'][0]}}}, "
                         else:
                             args_str = ""
                         args_str += ", ".join([f"\\marg{{{e[0]}}}" for e in cmd["args"]])
@@ -238,56 +275,56 @@ class Converter:
         header = ""
 
         # Read license first such that other components can also use its content
-        license_str = ""
-        with open(rsc_dir / "license.txt", encoding="utf-8") as f:
-            lines = f.readlines()
-            # TODO this breaks if the file exists but is empty
-            license_str += f"{lines[0]}"
-            for line in lines[1:]:
-                license_str += f"    {line}"
-        self.pkg_meta["pkg_license_text"] = license_str
+        # license_str = ""
+        # with open(rsc_dir / "license.txt", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        #     # TODO this breaks if the file exists but is empty
+        #     license_str += f"{lines[0]}"
+        #     for line in lines[1:]:
+        #         license_str += f"    {line}"
+        # self.pkg_meta["pkg_license_text"] = license_str
 
         header += self._fill_template(TEMPLATE_PATH / Path("01_head.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("02_preamble_template.tex"))
         header += self._fill_template(TEMPLATE_PATH / Path("03_postamble_template.tex"))
 
-        pkg_packages_str = ""
-        with open(rsc_dir / "pkg_packages.tex", encoding="utf-8") as f:
-            lines = f.readlines()
-            for line in lines:
-                pkg_packages_str += f"{line}"
-        self.pkg_meta["pkg_packages"] = pkg_packages_str
+        # pkg_packages_str = ""
+        # with open(rsc_dir / "pkg_packages.tex", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        #     for line in lines:
+        #         pkg_packages_str += f"{line}"
+        # self.pkg_meta["pkg_packages"] = pkg_packages_str
         header += self._fill_template(TEMPLATE_PATH / Path("04_generate_template.tex"))
 
         # Load packages (no template)
         # TODO differentiate between packages that are required by the converter
         # and those that are required by the documentation
         # the first should not be user defined
-        with open(rsc_dir / "docu_packages_and_settings.tex", encoding="utf-8") as f:
-            lines = f.readlines()
-            for line in lines:
-                header += line
-        header += "\n"
+        # with open(rsc_dir / "docu_packages_and_settings.tex", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        #     for line in lines:
+        #         header += line
+        # header += "\n"
 
         header += self._fill_template(TEMPLATE_PATH / Path("05_predocument.tex"))
         # header += self._fill_template(TEMPLATE_PATH / Path("06_begin_document_template.tex"))
 
-        introduction_str = ""
-        with open(rsc_dir / "introduction.tex", encoding="utf-8") as f:
-            lines = f.readlines()
-            introduction_str += f"{lines[0]}"
-            for line in lines[1:]:
-                introduction_str += f"    {line}"
-        self.pkg_meta["pkg_introduction"] = introduction_str
+        # introduction_str = ""
+        # with open(rsc_dir / "introduction.tex", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        #     introduction_str += f"{lines[0]}"
+        #     for line in lines[1:]:
+        #         introduction_str += f"    {line}"
+        # self.pkg_meta["pkg_introduction"] = introduction_str
 
-        example_str = ""
-        with open(rsc_dir / "example.tex", encoding="utf-8") as f:
-            lines = f.readlines()
-            # TODO this breaks if the file exists but is empty
-            example_str += f"{lines[0]}"
-            for line in lines[1:]:
-                example_str += f"    {line}"
-        self.pkg_meta["pkg_example"] = example_str
+        # example_str = ""
+        # with open(rsc_dir / "example.tex", encoding="utf-8") as f:
+        #     lines = f.readlines()
+        #     # TODO this breaks if the file exists but is empty
+        #     example_str += f"{lines[0]}"
+        #     for line in lines[1:]:
+        #         example_str += f"    {line}"
+        # self.pkg_meta["pkg_example"] = example_str
 
         header += self._fill_template(TEMPLATE_PATH / Path("06_document_template.tex"))
         header += "\n"
@@ -389,7 +426,7 @@ class Converter:
                 options = [command["oarg"]] + options
 
             if n - 1 >= len(options):
-                print(f"Replacement error: list not long enough {command['name']}")
+                _logger.error(f"Replacement error: list not long enough {command['name']}")
                 return f"param {n}"
 
             var_components = options[n - 1][0].split(" ")
@@ -459,7 +496,7 @@ class Converter:
                 options = [command["oarg"]] + options
 
             if n - 1 >= len(options):
-                print(f"Replacement error: list not long enough {command['name']}")
+                _logger.error(f"Replacement error: list not long enough {command['name']}")
                 return f"param {n}"
             return options[n - 1][0]
 
@@ -478,10 +515,10 @@ class Converter:
         param_n = 1
         if command["oarg_default"]:
             obj_impl += f"% \\#{param_n} - {command['oarg'][0]}: "
-            obj_impl += f"{command['oarg'][1].replace("#", "\\#")}\\\\\n"
+            obj_impl += command["oarg"][1].replace("#", "\\#") + "\\\\\n"
             param_n += 1
         for arg in command["args"]:
-            obj_impl += f"% \\#{param_n} - {arg[0]}: {arg[1].replace("#", "\\#")}"
+            obj_impl += f"% \\#{param_n} - {arg[0]}: " + arg[1].replace("#", "\\#")
             param_n += 1
             if not arg == command["args"][-1]:
                 obj_impl += "\\\\\n"
@@ -498,16 +535,46 @@ class Converter:
         return obj_docu, obj_impl, command
 
     def _fill_template(self, file_path: Path) -> str:
-        # Read the entire file into one string
-        if file_path.exists():
-            result: str = file_path.read_text(encoding="utf-8")
-
-            for key, value in self.pkg_meta.items():
-                result = result.replace(f"<{key.upper()}>", f"{value}")
-            return result
-        else:
-            print(f"File {file_path} does not exist.")
+        if not file_path.exists():
+            _logger.error(f"File {file_path} does not exist.")
             return ""
+
+        result: str = file_path.read_text(encoding="utf-8")
+
+        placeholder_pattern = re.compile(r"<([A-Z0-9_]+)>")
+        found_placeholders = set(placeholder_pattern.findall(result))
+        known_keys = {key.upper() for key in self.pkg_meta.keys()}
+
+        # Replace known placeholders
+        def replace(match: re.Match[str]) -> str:
+            key = match.group(1)
+            if key in known_keys:
+                return str(self.pkg_meta[key.lower()])
+            else:
+                # If no replacement for the placeholder is defined
+                # replace it with an empty string
+                return ""
+
+        result = placeholder_pattern.sub(replace, result)
+
+        # Warn about unknown placeholders
+        unknown = found_placeholders - known_keys
+        for key in unknown:
+            _logger.warning(f"Unknown placeholder <{key}> in {file_path}")
+
+        return result
+
+    # def _fill_template(self, file_path: Path) -> str:
+    #     # Read the entire file into one string
+    #     if file_path.exists():
+    #         result: str = file_path.read_text(encoding="utf-8")
+
+    #         for key, value in self.pkg_meta.items():
+    #             result = result.replace(f"<{key.upper()}>", f"{value}")
+    #         return result
+    #     else:
+    #         _logger.error(f"File {file_path} does not exist.")
+    #         return ""
 
     def _add_description_box(self, desc_strs: list[str]) -> str:
         description = "% \\begin{descriptionbox}\n"

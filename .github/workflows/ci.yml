@@ -1,0 +1,33 @@
+########################
+########################
+## CI Pipeline Action ##
+########################
+########################
+name: CI Pipeline
+
+# Start the job on push to main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ###########################
+  # Execute linter workflow #
+  ###########################
+  linter_workflow:
+    uses: ./.github/workflows/linter.yml
+    permissions:
+      contents: read
+      packages: read
+      # To report GitHub Actions status checks
+      statuses: write
+  #####################################
+  # Execute compilation test workflow #
+  #####################################
+  docs_workflow:
+    needs: linter_workflow
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/compilation_test.yml
