@@ -1,0 +1,170 @@
+% \iffalse meta-comment
+% !TEX program = pdfLaTeX
+%<*internal>
+\iffalse
+%</internal>
+%<*readme>
+----------------------------------------------------------------
+testcase3 v1.0.0 --- Description: Test 3
+E-mail: authoremail@test3.com
+
+Released under License: Test 3
+See License Link: Test 3
+----------------------------------------------------------------
+
+Description: Test 3
+%</readme>
+
+%<*internal>
+\fi
+\def\nameofplainTeX{plain}
+\ifx\fmtname\nameofplainTeX\else
+  \expandafter\begingroup
+\fi
+%</internal>
+%<*install>
+\input docstrip.tex % chktex 27
+\keepsilent
+\askforoverwritefalse
+\preamble
+---------------------------------------------------------------
+testcase3 v1.0.0 --- Description: Test 3
+Maintained by Authorname: Test 3
+E-mail: authoremail@test3.com
+
+Released under License: Test 3
+See License Link: Test 3
+---------------------------------------------------------------
+\endpreamble
+\postamble
+Copyright (C) 2026/04/08 by
+  Authorname: Test 3 <authoremail@test3.com>
+
+Released under License: Test 3
+See License Link: Test 3
+
+This work is maintained by
+  Authorname: Test 3.
+
+This work consists of the file  testcase3.dtx
+          and the derived files testcase3.pdf,
+                                testcase3.sty and
+                                testcase3.ins.
+
+\endpostamble
+\usedir{tex/latex/testcase3}
+\generate{
+  \file{testcase3.sty}{\from{testcase3.dtx}{package}}
+}
+%</install>
+%<install>\endbatchfile
+%<*internal>
+\usedir{source/latex/testcase3}
+\generate{
+  \file{testcase3.ins}{\from{testcase3.dtx}{install}}
+}
+\nopreamble\nopostamble
+\usedir{doc/latex/testcase3}
+\generate{
+  \file{README.txt}{\from{testcase3.dtx}{readme}}
+}
+\ifx\fmtname\nameofplainTeX
+  \expandafter\endbatchfile
+\else
+  \expandafter\endgroup
+\fi
+%</internal>
+
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{testcase3}[2026/04/08 v1.0.0 Info Text: Test 3]
+
+\RequirePackage{fp}
+
+%</package>
+
+%<*driver>
+\documentclass{ltxdoc}
+
+\usepackage{xcolor}
+\definecolor{uos-red}{cmyk}{0.2, 1, 0.65, 0.25}
+
+\usepackage{etoc}
+\setcounter{tocdepth}{2} % show only sections and subsections
+\usepackage{hyperref}
+\hypersetup{
+  linkcolor=uos-red,
+}
+
+\setlength{\parindent}{0pt}
+
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\makeatletter
+\newcommand{\setlabel}[2]{%
+  \def\@currentlabel{\unexpanded{#1}}\label{#2}%
+}
+\makeatother
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+    \title{The \textsf{testcase3} Package}
+    \author{Authorname: Test 3}
+    \date{Version 1.0.0\\2026/04/08}
+    \maketitle
+
+    \tableofcontents
+
+    \section{Introduction}
+
+The \texttt{tex-to-dtx-converter} package allows to convert tex files into a dtx file. This is a test Introduction.
+
+\clearpage
+
+    \section{Example}
+
+This is a test example.
+
+\begin{itemize}
+    \setlength\itemsep{0em}
+    \item first option
+    \item second option
+\end{itemize}
+
+\clearpage
+    \DocInput{testcase3.dtx}
+    \clearpage
+    \section{License}
+
+THIS IS A TEST LICENSE
+
+Copyright (c) 2026, Rene Warnking
+
+\begin{enumerate}
+   \item Condition 1
+   \item Condition 2
+   \item Condition 3
+\end{enumerate}
+
+SOME TEXT
+
+\clearpage
+
+\end{document}
+%</driver>
+% \fi
+
+% \section{Macro Documentation}
+
+% \section{Implementation}
+
+% \iffalse
+%<*package>
+% \fi
+% \iffalse
+%</package>
+% \fi
