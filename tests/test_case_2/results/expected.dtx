@@ -1,0 +1,118 @@
+% \iffalse meta-comment
+% !TEX program = pdfLaTeX
+%<*internal>
+\iffalse
+%</internal>
+%<*readme>
+----------------------------------------------------------------
+testcase2 v1.0.0 --- Description: Test 2
+E-mail: authoremail@test2.com
+
+Released under License: Test 2
+See License Link: Test 2
+----------------------------------------------------------------
+
+Description: Test 2
+%</readme>
+
+%<*internal>
+\fi
+\def\nameofplainTeX{plain}
+\ifx\fmtname\nameofplainTeX\else
+  \expandafter\begingroup
+\fi
+%</internal>
+%<*install>
+\input docstrip.tex % chktex 27
+\keepsilent
+\askforoverwritefalse
+\preamble
+---------------------------------------------------------------
+testcase2 v1.0.0 --- Description: Test 2
+Maintained by Authorname: Test 2
+E-mail: authoremail@test2.com
+
+Released under License: Test 2
+See License Link: Test 2
+---------------------------------------------------------------
+\endpreamble
+\postamble
+Copyright (C) 2026/04/08 by
+  Authorname: Test 2 <authoremail@test2.com>
+
+Released under License: Test 2
+See License Link: Test 2
+
+This work is maintained by
+  Authorname: Test 2.
+
+This work consists of the file  testcase2.dtx
+          and the derived files testcase2.pdf,
+                                testcase2.sty and
+                                testcase2.ins.
+
+\endpostamble
+\usedir{tex/latex/testcase2}
+\generate{
+  \file{testcase2.sty}{\from{testcase2.dtx}{package}}
+}
+%</install>
+%<install>\endbatchfile
+%<*internal>
+\usedir{source/latex/testcase2}
+\generate{
+  \file{testcase2.ins}{\from{testcase2.dtx}{install}}
+}
+\nopreamble\nopostamble
+\usedir{doc/latex/testcase2}
+\generate{
+  \file{README.txt}{\from{testcase2.dtx}{readme}}
+}
+\ifx\fmtname\nameofplainTeX
+  \expandafter\endbatchfile
+\else
+  \expandafter\endgroup
+\fi
+%</internal>
+
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{testcase2}[2026/04/08 v1.0.0 Info Text: Test 2]
+
+
+%</package>
+
+%<*driver>
+\documentclass{ltxdoc}
+
+
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+    \title{The \textsf{testcase2} Package}
+    \author{Authorname: Test 2}
+    \date{Version 1.0.0\\2026/04/08}
+    \maketitle
+
+    \tableofcontents
+
+    
+    
+    \DocInput{testcase2.dtx}
+    \clearpage
+    
+\end{document}
+%</driver>
+% \fi
+
+% \section{Macro Documentation}
+
+% \section{Implementation}
+
+% \iffalse
+%<*package>
+% \fi
+% \iffalse
+%</package>
+% \fi

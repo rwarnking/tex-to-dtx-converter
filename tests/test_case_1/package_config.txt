@@ -1,4 +1,4 @@
-pkg_name=tex-to-dtx-converter
+pkg_name=testcase1
 pkg_description=Description: Test 1
 pkg_author=Authorname: Test 1
 pkg_author_email=authoremail@test1.com
@@ -6,3 +6,4 @@ pkg_date=today
 pkg_version=1.0.0
 pkg_info_text=Info Text: Test 1
 pkg_license_name=License: Test 1
+pkg_license_link=License Link: Test 1

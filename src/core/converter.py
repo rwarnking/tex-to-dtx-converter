@@ -60,7 +60,7 @@ class Converter:
                 section_name = file_dir.stem.split("_")[1]
                 parsed_tex[section_name] = self._parse_tex(file_dir)
             else:
-                _logger.error(f"Unknown file type for file {file_dir.stem}.")
+                _logger.warning(f"Unknown file type for file {file_dir.stem}.")
 
             self.meta_info.incr_file_count()
 
@@ -96,6 +96,7 @@ class Converter:
             "pkg_version": "1.0.0",
             "pkg_info_text": "Info Text: Default",
             "pkg_license_name": "License: Default",
+            "pkg_license_link": "License Link: Default",
         }
 
         _logger.info(f"Loading metadata from {rsc_dir}.")
@@ -136,8 +137,8 @@ class Converter:
             #     first, *rest = lines
             #     result = first + "".join(f"    {line.lstrip()}" for line in rest)
 
-            self.pkg_meta[file_path.name] = result
-            _logger.info(f"Loaded filecontents to {file_path.name}.")
+            self.pkg_meta[file_path.stem] = result
+            _logger.info(f"Loaded filecontents to {file_path.stem}.")
 
     def _parse_tex(self, file_dir: Path) -> list[ParsedObject]:
         tex_objects: list[ParsedObject] = []
@@ -259,7 +260,7 @@ class Converter:
         # impl_output += "%    \\begin{macrocode}\n"
         # impl_output += "%    \\end{macrocode}\n"
         impl_output += "% \\iffalse\n"
-        impl_output += "%<*package>\n"
+        impl_output += "%</package>\n"
         impl_output += "% \\fi\n"
 
         output += "% \\section{Macro Documentation}\n"

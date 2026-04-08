@@ -1,0 +1,22 @@
+\usepackage{xcolor}
+\definecolor{uos-red}{cmyk}{0.2, 1, 0.65, 0.25}
+
+\usepackage{etoc}
+\setcounter{tocdepth}{2} % show only sections and subsections
+\usepackage{hyperref}
+\hypersetup{
+  linkcolor=uos-red,
+}
+
+\setlength{\parindent}{0pt}
+
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\makeatletter
+\newcommand{\setlabel}[2]{%
+  \def\@currentlabel{\unexpanded{#1}}\label{#2}%
+}
+\makeatother
